@@ -1,0 +1,62 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>LILA BLACK | Player Journey Explorer</title>
+  <link rel="stylesheet" href="{% static 'telemetry/css/dashboard.css' %}">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand"><div class="brand-mark">L</div><div><strong>LILA BLACK</strong><span>PLAYER JOURNEY INTELLIGENCE</span></div></div>
+  <div class="top-right"><i></i> INTERNAL ANALYTICS <b>BETA</b></div>
+</header>
+<main class="main">
+  <section class="heading">
+    <div><div class="eyebrow">LEVEL DESIGN / TELEMETRY</div><h1>Player Journey <em>Explorer</em></h1><p>Understand how players move, fight, loot and survive across your maps.</p></div>
+    <div class="status"><i id="dbStatus"></i><span id="statusText">CONNECTING TO TELEMETRY</span></div>
+  </section>
+  <section class="stats">
+    <article><div class="stat-icon blue">♙</div><div><small>PLAYERS IN VIEW</small><strong id="players">—</strong></div></article>
+    <article><div class="stat-icon red">⌖</div><div><small>PLAYER KILLS</small><strong id="kills">—</strong></div></article>
+    <article><div class="stat-icon orange">✕</div><div><small>TOTAL DEATHS</small><strong id="deaths">—</strong></div></article>
+    <article><div class="stat-icon yellow">◇</div><div><small>LOOT PICKUPS</small><strong id="loot">—</strong></div></article>
+  </section>
+  <section class="workspace">
+    <aside class="sidebar">
+      <div class="section-title">MATCH FILTERS <span>01</span></div>
+      <label>MAP</label><select id="mapSelect">{% for key, value in maps.items %}<option value="{{ key }}">{{ value.label }}</option>{% endfor %}</select>
+      <label>DATE</label><select id="dateSelect"><option value="all">All dates</option></select>
+      <label>MATCH ID</label><select id="matchSelect"><option value="all">All matches</option></select>
+      <div class="rule"></div>
+      <div class="section-title">ENTITY VISIBILITY <span>02</span></div>
+      <label class="check"><span class="human">●</span> Human players <input type="checkbox" id="humans" checked><i></i></label>
+      <label class="check"><span class="bot">●</span> Bots <input type="checkbox" id="bots" checked><i></i></label>
+      <label class="check"><span class="loot">●</span> Event markers <input type="checkbox" id="events" checked><i></i></label>
+      <div class="rule"></div>
+      <div class="section-title">VISUALIZATION <span>03</span></div>
+      <div class="modes">
+        <button class="mode active" data-mode="journeys">⌁ <span>Player journeys</span></button>
+        <button class="mode" data-mode="kills">⊕ <span>Kill zones</span></button>
+        <button class="mode" data-mode="deaths">⊗ <span>Death zones</span></button>
+        <button class="mode" data-mode="traffic">▦ <span>Traffic heatmap</span></button>
+      </div>
+      <div class="note"><b>DATA NOTE</b><p>February 14 is a partial collection day. Compare it carefully against complete days.</p></div>
+    </aside>
+    <section class="map-panel">
+      <div class="map-head"><div><small>TACTICAL OVERVIEW</small><h2 id="mapTitle">Ambrose Valley</h2></div><div class="projection">WORLD X / Z PROJECTION <button id="reset" title="Reset playback">↻</button></div></div>
+      <div class="map-stage" id="mapStage">
+        <img id="minimap" src="{% static 'telemetry/minimaps/AmbroseValley_Minimap.png' %}" alt="Map minimap">
+        <canvas id="overlay" width="1024" height="1024"></canvas>
+        <div class="empty" id="emptyState"><div class="empty-symbol">⌁</div><b>No telemetry loaded</b><p>Import the supplied Parquet files using the Django management command.</p><code>python manage.py load_telemetry</code></div>
+      </div>
+      <div class="legend"><span><i class="human"></i> Human path</span><span><i class="bot"></i> Bot path</span><span><i class="kill"></i> Kill</span><span><i class="death"></i> Death</span><span><i class="storm"></i> Storm</span><span><i class="loot"></i> Loot</span></div>
+      <div class="timeline"><div class="timeline-head"><div><small>MATCH PLAYBACK</small><b id="timelineMatch">All matches</b></div><span id="timePct">100% OF TIMELINE</span></div><div class="timeline-controls"><button id="play">▶</button><input type="range" id="progress" min="0" max="100" value="100"><span id="timeState">END</span></div></div>
+      <div id="notice" class="notice" hidden></div>
+    </section>
+  </section>
+  <footer><span>LILA BLACK · PLAYER JOURNEY EXPLORER</span><span>DJANGO TELEMETRY DASHBOARD</span></footer>
+</main>
+<script>window.TELEMETRY_CONFIG = { maps: {{ maps_json|safe }} };</script>
+<script src="{% static 'telemetry/js/dashboard.js' %}"></script>
+</body></html>

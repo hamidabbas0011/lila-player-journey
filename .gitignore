@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Django generated files
+db.sqlite3
+staticfiles/
+media/
+
+# Secrets and local environment
+.env
+.env.*
+!.env.example
+
+# IDE / OS
+.vs/
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Local dataset (obtain from the assessment package; do not commit raw telemetry)
+data/player_data/
