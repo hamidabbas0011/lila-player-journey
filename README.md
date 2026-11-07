@@ -1,154 +1,369 @@
-# LILA BLACK — Player Journey Explorer (Django)
+# LILA BLACK - Player Journey Visualization Tool
 
-A Django-powered internal telemetry explorer for LILA BLACK level designers. This Django application imports the supplied LILA BLACK telemetry into SQLite and provides a browser-based player journey and event explorer.
+A web-based telemetry visualization tool for exploring player movement, combat events, loot collection, and activity patterns across LILA BLACK maps.
 
-## Stack
+**Live Application:** https://lila-player-journey-iky1.onrender.com
 
-- Python + Django 5.1+
-- SQLite for the assessment dataset (89K-ish events)
-- Pandas + PyArrow for Parquet ingestion
-- Django JSON endpoints
-- HTML, CSS and vanilla JavaScript Canvas for the dashboard
+**GitHub Repository:** https://github.com/hamidabbas0011/lila-player-journey
 
-## Project layout
+---
+
+## 1. Project Overview
+
+The Player Journey Visualization Tool helps game designers and analysts understand how players interact with different maps.
+
+It processes gameplay telemetry stored in Parquet files and visualizes player activity on the corresponding minimaps.
+
+The application supports three maps:
+
+- Ambrose Valley
+- GrandRift
+- Lockdown
+
+The dataset contains five days of telemetry, from February 10 to February 14, 2026.
+
+### Dataset Summary
+
+| Metric | Value |
+|---|---:|
+| Dataset files | 1,243 |
+| Telemetry events imported | 89,104 |
+| Unique players | 339 |
+| Matches | 796 |
+| Maps | 3 |
+| Collection period | February 10-14, 2026 |
+
+Note: February 14 is a partial collection day.
+
+---
+
+## 2. Features
+
+### Player Journey Visualization
+- Displays player movement paths on the correct minimap.
+- Distinguishes human players from bots.
+- Supports visibility controls for human players and bots.
+- Uses world-coordinate conversion to position telemetry correctly.
+
+### Event Markers
+Visualizes important gameplay events:
+
+- Kills
+- Deaths
+- Bot kills and deaths
+- Storm deaths
+- Loot pickups
+
+### Filters
+- Map selection
+- Date selection
+- Match selection
+- Human player visibility
+- Bot visibility
+- Event marker visibility
+
+### Visualization Modes
+- Player Journeys
+- Kill Zones
+- Death Zones
+- Traffic Heatmap
+
+### Match Playback
+- Timeline slider
+- Playback controls
+- Time-based visualization of player activity
+
+### Dashboard Statistics
+Displays:
+- Players in view
+- Player kills
+- Total deaths
+- Loot pickups
+- Events loaded
+
+---
+
+## 3. Technology Stack
+
+| Technology | Purpose |
+|---|---|
+| Python | Backend development and data processing |
+| Django | Web framework and API endpoints |
+| SQLite | Local development database |
+| PostgreSQL | Production database |
+| Pandas | Parquet data processing |
+| PyArrow | Parquet file reading |
+| HTML | Dashboard structure |
+| CSS | Dashboard styling |
+| JavaScript | Interactive visualizations |
+| HTML Canvas | Rendering player paths and event markers |
+| Render | Application hosting |
+| GitHub | Version control and source code hosting |
+
+---
+
+## 4. Dataset Structure
+
+The original dataset is organized by date.
 
 ```text
-lila-django-player-journey/
-├── config/                         # Django project settings, URLs, ASGI/WSGI
-├── telemetry/
-│   ├── management/commands/
-│   │   └── load_telemetry.py       # Parquet -> SQLite importer
-│   ├── migrations/
-│   ├── static/telemetry/
-│   │   ├── css/dashboard.css
-│   │   ├── js/dashboard.js
-│   │   └── minimaps/               # Actual supplied minimap assets
-│   ├── templates/telemetry/
-│   │   └── dashboard.html
-│   ├── models.py
-│   ├── urls.py
-│   └── views.py                    # Dashboard + JSON APIs
-├── data/player_data/               # Place the supplied dataset here (README included)
-├── manage.py
-└── requirements.txt
+player_data/
+├── February_10/
+├── February_11/
+├── February_12/
+├── February_13/
+└── February_14/
 ```
 
-## Dataset setup
+Each Parquet file represents one player or bot in one match.
 
-The raw `.nakama-0` Parquet files are intentionally excluded from this source repository. Obtain `player_data.zip` from the assessment materials, extract it so the five `February_*` folders are inside `data/player_data/`, and keep the supplied `data/player_data/README.md` alongside them. Then run the import command below.
+The filename follows this format:
 
-## Run locally (Windows PowerShell)
-
-```powershell
-py -m venv .venv
-.venv\\Scripts\\Activate.ps1
-pip install -r requirements.txt
-
-python manage.py migrate
-python manage.py load_telemetry
-
-python manage.py runserver
+```text
+{user_id}_{match_id}.nakama-0
 ```
 
-Open http://127.0.0.1:8000/
+Human players are identified by UUID user IDs, while bots use short numeric user IDs.
 
-If PowerShell blocks virtual-environment activation, run the commands from Command Prompt instead:
+The telemetry schema includes:
 
-```bat
-.venv\\Scripts\\activate.bat
-```
+- user_id
+- match_id
+- map_id
+- x
+- y
+- z
+- ts
+- event
 
-## Run locally (macOS/Linux)
+The `y` coordinate represents elevation. The dashboard uses `x` and `z` for its top-down projection.
 
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
+---
 
-python manage.py migrate
-python manage.py load_telemetry
-python manage.py runserver
-```
+## 5. Coordinate Mapping
 
-## Importing data
+World coordinates are converted into minimap pixel coordinates.
 
-The importer reads files matching:
-
-`data/player_data/February_*/*.nakama-0`
-
-The source README specifies:
-- Each Parquet file represents one player in one match.
-- UUID user IDs are humans; numeric IDs are bots.
-- `event` is stored as bytes and is decoded to UTF-8.
-- `ts` is match-relative elapsed time represented as a timestamp in milliseconds.
-- February 14 is a partial collection day.
-
-To replace all previously imported telemetry and reload:
-
-```bash
-python manage.py load_telemetry --replace
-```
-
-The importer uses Django bulk inserts and database indexes for map/date/match/event queries.
-
-## API endpoints
-
-- `GET /api/filters/?map=AmbroseValley&date=all`
-  - Returns available dates and matches for the selected map/date.
-- `GET /api/telemetry/?map=AmbroseValley&date=all&match=all&humans=1&bots=1`
-  - Returns filtered event rows and summary metrics.
-  - Returns all rows matching the selected map/date/match filters. The all-matches view can return a larger payload; select a date or match if browser performance becomes slow.
-
-## Coordinate mapping
-
-The source README defines the world-to-minimap projection:
+The conversion formula is:
 
 ```text
 u = (x - origin_x) / scale
 v = (z - origin_z) / scale
-canvas_x = u * canvas_width
-canvas_y = (1 - v) * canvas_height
+
+pixel_x = u * 1024
+pixel_y = (1 - v) * 1024
 ```
 
 Map configuration:
 
 | Map | Scale | Origin X | Origin Z |
 |---|---:|---:|---:|
-| AmbroseValley | 900 | -370 | -473 |
+| Ambrose Valley | 900 | -370 | -473 |
 | GrandRift | 581 | -290 | -290 |
 | Lockdown | 1000 | -500 | -500 |
 
-Only world X and Z are used for the top-down map; Y is elevation. The provided images have different native dimensions, so the browser draws the image and canvas into the same square stage and applies normalized UV coordinates. Verify known sample points against the minimap before claiming final coordinate accuracy.
+---
 
-## Deployment notes
+## 6. Local Setup
 
-For a public deployment:
-1. Set `DEBUG = False`.
-2. Set a strong `SECRET_KEY` via environment variable.
-3. Configure `ALLOWED_HOSTS`.
-4. Use PostgreSQL for a hosted environment rather than SQLite.
-5. Run migrations and `python manage.py load_telemetry` as a one-time release/import step.
-6. Run `python manage.py collectstatic`.
-7. Serve with Gunicorn, for example `gunicorn config.wsgi:application`.
-8. Configure HTTPS and appropriate static-file hosting.
+### Requirements
 
-Do not expose this internal telemetry dashboard publicly without access control. Add authentication before sharing a production URL.
+- Python 3
+- pip
+- Git
 
-## Current scope and known limitations
+### Clone the repository
 
-- Journey lines, kill/death/traffic heatmaps, event markers, human/bot filters, map/date/match filters and timeline playback are implemented.
-- Playback is most meaningful with one match selected. “All matches” combines multiple match-relative timelines.
-- The API currently returns all rows matching the selected filters. Large all-matches responses may affect browser performance; narrow by date or match if needed.
-- Heatmaps use simple spatial bins, not a smoothed kernel-density estimator.
-- This repository is a local project scaffold. It has not been deployed or runtime-tested in this environment.
+```bash
+git clone https://github.com/hamidabbas0011/lila-player-journey.git
 
-## Hosted deployment configuration
+cd lila-player-journey
+```
 
-The project includes a `Procfile` for Gunicorn and `render-build.sh` for a Render-style build. Configure these environment variables in the hosting service:
+### Create a virtual environment
 
-- `DJANGO_SECRET_KEY`: a long, random secret (never commit it).
-- `DJANGO_DEBUG`: `False`.
-- `DJANGO_ALLOWED_HOSTS`: the assigned hostname, without `https://`.
-- `DATABASE_URL`: PostgreSQL connection URL supplied by the host. If omitted, Django uses local SQLite, which is suitable for development but not an ephemeral hosted filesystem.
+```bash
+python -m venv .venv
+```
 
-The source dataset is not bundled into the source repository. For a hosted deployment, arrange a secure one-time data import into the hosted database before opening the dashboard. Do not expose the dashboard publicly without authentication or other access control; the current assessment build has no login gate.
+Activate it on Windows:
+
+```powershell
+.venv\Scripts\activate
+```
+
+### Install dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+### Configure the dataset
+
+Extract the supplied Parquet dataset into:
+
+```text
+data/player_data/
+```
+
+The date folders should be directly inside `player_data`.
+
+### Run database migrations
+
+```bash
+python manage.py migrate
+```
+
+### Import telemetry
+
+```bash
+python manage.py load_telemetry
+```
+
+### Start the development server
+
+```bash
+python manage.py runserver
+```
+
+Open:
+
+```text
+http://127.0.0.1:8000/
+```
+
+---
+
+## 7. Database Configuration
+
+The application uses:
+
+- SQLite for local development.
+- PostgreSQL for production deployment on Render.
+
+The production database is configured through the `DATABASE_URL` environment variable.
+
+Database credentials and secret keys must not be committed to GitHub.
+
+---
+
+## 8. Deployment
+
+The application is deployed on Render as a Django Web Service.
+
+The deployment uses:
+
+**Build command**
+
+```bash
+./render-build.sh
+```
+
+**Start command**
+
+```bash
+gunicorn config.wsgi:application --bind 0.0.0.0:$PORT
+```
+
+Production environment variables:
+
+```text
+DJANGO_DEBUG=False
+DJANGO_SECRET_KEY=<your-secret-key>
+DJANGO_ALLOWED_HOSTS=<your-render-hostname>
+DATABASE_URL=<your-postgresql-connection-url>
+```
+
+The production database is PostgreSQL.
+
+The raw Parquet dataset and local SQLite database are excluded from the Git repository.
+
+---
+
+## 9. API Endpoints
+
+The application exposes endpoints for retrieving filter options and telemetry data.
+
+### Filter API
+
+```text
+/api/filters/
+```
+
+Supports map and date filtering.
+
+Example:
+
+```text
+/api/filters/?map=AmbroseValley&date=all
+```
+
+### Telemetry API
+
+```text
+/api/telemetry/
+```
+
+Supports filtering by map, date, match, and entity visibility.
+
+Example:
+
+```text
+/api/telemetry/?map=AmbroseValley&date=all&match=all&humans=1&bots=1
+```
+
+The telemetry endpoint limits returned event rows to 60,000 per request to control response size. Summary statistics are calculated separately from the full filtered queryset.
+
+---
+
+## 10. Repository Structure
+
+```text
+lila-player-journey/
+│
+├── config/
+│   ├── settings.py
+│   ├── urls.py
+│   ├── asgi.py
+│   └── wsgi.py
+│
+├── telemetry/
+│   ├── management/
+│   │   └── commands/
+│   │       └── load_telemetry.py
+│   ├── migrations/
+│   ├── static/
+│   │   └── telemetry/
+│   │       ├── css/
+│   │       ├── js/
+│   │       └── minimaps/
+│   ├── templates/
+│   ├── models.py
+│   ├── views.py
+│   └── urls.py
+│
+├── ARCHITECTURE.md
+├── INSIGHTS.md
+├── WALKTHROUGH.md
+├── requirements.txt
+├── render-build.sh
+├── Procfile
+└── manage.py
+```
+
+---
+
+## 11. Notes and Limitations
+
+- February 14 contains partial telemetry and should be compared carefully against complete collection days.
+- The API limits the number of returned event rows per request.
+- Player journeys are visualized using the available position telemetry.
+- The tool is intended for internal gameplay analysis and level-design exploration.
+
+---
+
+## 12. Links
+
+- Live Dashboard: https://lila-player-journey-iky1.onrender.com
+- Source Code: https://github.com/hamidabbas0011/lila-player-journey
+
